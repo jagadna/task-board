@@ -1,8 +1,9 @@
-from fastapi import FastAPI ,Depends ,HTTPException
+from fastapi import FastAPI ,Depends ,HTTPException,Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .database import Base,engine,get_db
 from . import models, schemas, crud
+from typing import List,Optional
 
 
 Base.metadata.create_all(bind=engine)
@@ -46,6 +47,11 @@ def delete_task(task_id: int,db:Session = Depends(get_db)):
 @app.get("/tasks",response_model = list[schemas.TaskOut])
 def gets_tasks(db:Session = Depends(get_db)):
 	return crud.list_task(db)
+
+
+@app.get("/tasks",response_model=list[schemas.TaskOut])
+def get_query_tasks(status:Optional[str] = Query(None),assigned_to:Optional[str]=Query(None),q:Optional[str]=Query(None),db:Session= Depends(get_db),limit:int = Query(50,ge=1,le=200),offset:int = Query(0,ge=200)):
+	return crud.get_tasks(db,status=status,assigned_to=assigned_to,q=q,limit=limit,offset=offset)
 
 
 

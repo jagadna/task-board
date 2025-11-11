@@ -33,5 +33,19 @@ def list_task(db:Session):
 	return db.query(models.Task).order_by(models.Task.id.asc()).all()
 
 
+def list_tasks(db:Session,status:str|None = None, assigned_to: str|None = None,q:str|None= None,limit:int=50,offset:int =0):
+	query = db.query(models.Task)
+	if status:
+		query = query.filter(models.Task.status==status)
+	if assigned_to:
+		query =  query.filter(models.Task.assigned_to==assigned_to)
+	if q:
+		like = f"%{q.lower}%"
+		query = query.filter(models.Task.task_name.ilike(like))
+
+
+	return query.order_by(models.Task.id.asc()).offset(offset).limit(limit).all();
+
+
 
 
