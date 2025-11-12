@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from . import models,schemas
+from sqlalchemy import asc,desc
 
 def get_tasks(db: Session, task_id:int):
 	return db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -33,7 +34,11 @@ def list_task(db:Session):
 	return db.query(models.Task).order_by(models.Task.id.asc()).all()
 
 
-def list_tasks(db:Session,status:str|None = None, assigned_to: str|None = None,q:str|None= None,limit:int=50,offset:int =0):
+def list_tasks(db:Session,status:str|None = None, assigned_to: str|None = None,q:str
+			   |None= None,limit:int=50,offset:int =0,
+			   sort_by : str = "id",
+			   order : str = "asc"):
+
 	query = db.query(models.Task)
 	if status:
 		query = query.filter(models.Task.status==status)
@@ -43,8 +48,16 @@ def list_tasks(db:Session,status:str|None = None, assigned_to: str|None = None,q
 		like = f"%{q.lower}%"
 		query = query.filter(models.Task.task_name.ilike(like))
 
-
-	return query.order_by(models.Task.id.asc()).offset(offset).limit(limit).all();
+	sort_map = {
+		"id" :models.Task.id,
+		"task_name" : models.Task.task_name,
+		"status" : models.Task.status,
+		"start_date" : models.Task.start_date,
+		"end_date" : models.Task.end_date
+	} 
+	col = sort_map.get(sort_by,models.Task.id)
+	direction = asc if order.lower()!="desc" else desc
+	return query.order_by(direction(col)).offset(offset).limit(limit).all()
 
 
 

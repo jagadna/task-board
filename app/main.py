@@ -49,9 +49,18 @@ def gets_tasks(db:Session = Depends(get_db)):
 	return crud.list_task(db)
 
 
-@app.get("/tasks",response_model=list[schemas.TaskOut])
-def get_query_tasks(status:Optional[str] = Query(None),assigned_to:Optional[str]=Query(None),q:Optional[str]=Query(None),db:Session= Depends(get_db),limit:int = Query(50,ge=1,le=200),offset:int = Query(0,ge=200)):
-	return crud.get_tasks(db,status=status,assigned_to=assigned_to,q=q,limit=limit,offset=offset)
+@app.get("/tasks", response_model=List[schemas.TaskOut])
+def get_tasks(
+    status: Optional[str] = Query(None),
+    assigned_to: Optional[str] = Query(None),
+    q: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    sort_by: str = Query("id"),
+    order: str = Query("asc"),  # asc | desc
+    db: Session = Depends(get_db),
+):
+    return crud.list_tasks(db, status, assigned_to, q, limit, offset, sort_by, order)
 
 
 
