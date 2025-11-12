@@ -53,7 +53,8 @@ def list_tasks(db:Session,status:str|None = None, assigned_to: str|None = None,q
 		"task_name" : models.Task.task_name,
 		"status" : models.Task.status,
 		"start_date" : models.Task.start_date,
-		"end_date" : models.Task.end_date
+		"end_date" : models.Task.end_date,
+		"priority": models.Task.priority, 
 	} 
 	col = sort_map.get(sort_by,models.Task.id)
 	direction = asc if order.lower()!="desc" else desc

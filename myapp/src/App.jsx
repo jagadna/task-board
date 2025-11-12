@@ -1,32 +1,46 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
+import "./App.css";
 
 const API = "http://127.0.0.1:8000";
 
+const statusOptions = [
+  "Considered",
+  "Investigation",
+  "Ready To Development",
+  "Under Development",
+  "Code Review",
+  "Development Completed",
+];
+
+const priorityOptions = ["Low", "Medium", "High", "Urgent"];
+const priorityFilters = ["All", ...priorityOptions];
+
 export default function App() {
-  // data + ui
   const [tasks, setTasks] = useState([]);
   const [err, setErr] = useState("");
-
-  // create form state
   const [f, setF] = useState({
     task_name: "",
-    status: "Considered",
+    status: statusOptions[0],
     assigned_to: "",
     start_date: "",
     end_date: "",
+    priority: "Medium",
   });
-
-  // edit state
   const [editId, setEditId] = useState(null);
   const [ef, setEf] = useState({
     task_name: "",
-    status: "Considered",
+    status: statusOptions[0],
     assigned_to: "",
     start_date: "",
     end_date: "",
+    priority: "Medium",
   });
+  const [priorityFilter, setPriorityFilter] = useState("All");
 
-  // load all tasks (GET /tasks)
+  useEffect(() => {
+    load();
+  }, []);
+
   async function load() {
     try {
       setErr("");
@@ -38,11 +52,7 @@ export default function App() {
       setErr(e.message || "Failed to load tasks");
     }
   }
-  useEffect(() => {
-    load();
-  }, []);
 
-  // create (POST /tasks)
   async function createTask(e) {
     e.preventDefault();
     setErr("");
@@ -53,6 +63,7 @@ export default function App() {
         assigned_to: f.assigned_to || null,
         start_date: f.start_date || null,
         end_date: f.end_date || null,
+        priority: f.priority,
       };
       const res = await fetch(`${API}/tasks`, {
         method: "POST",
@@ -64,17 +75,17 @@ export default function App() {
       setTasks((cur) => [created, ...cur]);
       setF({
         task_name: "",
-        status: "Considered",
+        status: statusOptions[0],
         assigned_to: "",
         start_date: "",
         end_date: "",
+        priority: "Medium",
       });
     } catch (e) {
       setErr(e.message || "Failed to create");
     }
   }
 
-  // view one (GET /tasks/{id})
   async function viewTask(id) {
     try {
       const res = await fetch(`${API}/tasks/${id}`);
@@ -86,19 +97,18 @@ export default function App() {
     }
   }
 
-  // start edit (prefill)
   function startEdit(t) {
     setEditId(t.id);
     setEf({
       task_name: t.task_name || "",
-      status: t.status || "Considered",
+      status: t.status || statusOptions[0],
       assigned_to: t.assigned_to || "",
       start_date: t.start_date || "",
       end_date: t.end_date || "",
+      priority: t.priority || "Medium",
     });
   }
 
-  // update (PATCH /tasks/{id})
   async function saveEdit() {
     try {
       const body = {
@@ -107,6 +117,7 @@ export default function App() {
         assigned_to: ef.assigned_to || null,
         start_date: ef.start_date || null,
         end_date: ef.end_date || null,
+        priority: ef.priority,
       };
       const res = await fetch(`${API}/tasks/${editId}`, {
         method: "PATCH",
@@ -122,7 +133,6 @@ export default function App() {
     }
   }
 
-  // delete (DELETE /tasks/{id})
   async function deleteTask(id) {
     if (!confirm(`Delete task #${id}?`)) return;
     try {
@@ -135,257 +145,214 @@ export default function App() {
     }
   }
 
-  // helpers
   const onChange = (e) => setF({ ...f, [e.target.name]: e.target.value });
   const onEditChange = (e) => setEf({ ...ef, [e.target.name]: e.target.value });
-  const th = {
-    textAlign: "left",
-    padding: "10px 12px",
-    borderBottom: "1px solid #eee",
-    fontWeight: 600,
-    fontSize: 14,
-  };
-  const td = {
-    padding: "10px 12px",
-    borderBottom: "1px solid #f2f2f2",
-    fontSize: 14,
-  };
-  const input = {
-    padding: "8px 10px",
-    border: "1px solid #ddd",
-    borderRadius: 6,
-  };
+
   function fmt(d) {
-    if (!d) return "—";
+    if (!d) return "--";
     try {
       const x = new Date(d);
-      return isNaN(x) ? d : x.toISOString().slice(0, 10);
+      return Number.isNaN(x.getTime()) ? d : x.toISOString().slice(0, 10);
     } catch {
       return d;
     }
   }
 
+  const statusTone = {
+    Considered: "badge badge-soft-purple",
+    Investigation: "badge badge-soft-sky",
+    "Ready To Development": "badge badge-soft-teal",
+    "Under Development": "badge badge-soft-indigo",
+    "Code Review": "badge badge-soft-amber",
+    "Development Completed": "badge badge-soft-emerald",
+  };
+
+  const priorityTone = {
+    Low: "badge badge-outline",
+    Medium: "badge badge-soft-indigo",
+    High: "badge badge-soft-rose",
+    Urgent: "badge badge-solid-rose",
+  };
+
+  const visibleTasks =
+    priorityFilter === "All"
+      ? tasks
+      : tasks.filter((t) => (t.priority ?? "Medium") === priorityFilter);
+
   return (
-    <div style={{ fontFamily: "system-ui, Arial", padding: 20 }}>
-      <h1>Task Board</h1>
+    <div className="page">
+      <header className="hero">
+        <div>
+          <p className="hero-eyebrow">Productivity Suite</p>
+          <h1 className="hero-title">Task Board</h1>
+          <p className="hero-subtitle">
+            Organize your backlog, track progress, and deliver work on time.
+          </p>
+        </div>
+        <div className="hero-card">
+          <p className="hero-card-label">Total tasks</p>
+          <p className="hero-card-value">{tasks.length}</p>
+        </div>
+      </header>
 
-      {err && <p style={{ color: "#c0392b" }}>Error: {err}</p>}
+      {err && <div className="alert">Error: {err}</div>}
 
-      {/* Create form */}
-      <form
-        onSubmit={createTask}
-        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}
-      >
-        <input
-          name="task_name"
-          value={f.task_name}
-          onChange={onChange}
-          placeholder="Task name"
-          style={input}
-          required
-        />
-        <select
-          name="status"
-          value={f.status}
-          onChange={onChange}
-          style={input}
-        >
-          <option>Considered</option>
-          <option>Investigation</option>
-          <option>Ready To Development</option>
-          <option>Under Development</option>
-          <option>Code Review</option>
-          <option>Development Completed</option>
-        </select>
-        <input
-          name="assigned_to"
-          value={f.assigned_to}
-          onChange={onChange}
-          placeholder="Assigned To"
-          style={input}
-        />
-        <input
-          type="date"
-          name="start_date"
-          value={f.start_date}
-          onChange={onChange}
-          style={input}
-        />
-        <input
-          type="date"
-          name="end_date"
-          value={f.end_date}
-          onChange={onChange}
-          style={input}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #2563eb",
-            borderRadius: 6,
-            background: "#2563eb",
-            color: "#fff",
-          }}
-        >
-          Add Task
-        </button>
-      </form>
+      <section className="panel">
+        <div className="panel-header">
+          <h2>Create a new task</h2>
+          <p>Add work items and assign owners in seconds.</p>
+        </div>
+        <form onSubmit={createTask} className="form-grid">
+          <input
+            name="task_name"
+            value={f.task_name}
+            onChange={onChange}
+            placeholder="Task name"
+            className="field"
+            required
+          />
+          <select name="status" value={f.status} onChange={onChange} className="field">
+            {statusOptions.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+          <select name="priority" value={f.priority} onChange={onChange} className="field">
+            {priorityOptions.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+          <input
+            name="assigned_to"
+            value={f.assigned_to}
+            onChange={onChange}
+            placeholder="Assigned to"
+            className="field"
+          />
+          <input type="date" name="start_date" value={f.start_date} onChange={onChange} className="field" />
+          <input type="date" name="end_date" value={f.end_date} onChange={onChange} className="field" />
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary">
+              Add task
+            </button>
+          </div>
+        </form>
+      </section>
 
-      {/* Table */}
-      <div
-        style={{ overflowX: "auto", border: "1px solid #eee", borderRadius: 8 }}
-      >
-        <table
-          style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}
-        >
-          <thead>
-            <tr style={{ background: "#fafafa" }}>
-              <th style={th}>ID</th>
-              <th style={th}>Task Name</th>
-              <th style={th}>Status</th>
-              <th style={th}>Assigned To</th>
-              <th style={th}>Start</th>
-              <th style={th}>End</th>
-              <th style={th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.length === 0 ? (
+      <section className="panel">
+        <div className="panel-header">
+          <h2>Current pipeline</h2>
+          <p>Monitor every task as it moves through your delivery stages.</p>
+        </div>
+        <div className="filter-bar" role="group" aria-label="Filter tasks by priority">
+          <span className="filter-label">Filter by priority</span>
+          <div className="filter-chips">
+            {priorityFilters.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`chip${priorityFilter === option ? " chip-active" : ""}`}
+                onClick={() => setPriorityFilter(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="table-wrapper">
+          <table className="task-table">
+            <thead>
               <tr>
-                <td style={td} colSpan="7">
-                  No tasks
-                </td>
+                <th>ID</th>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Owner</th>
+                <th>Start</th>
+                <th>Due</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              tasks.map((t) =>
-                editId === t.id ? (
-                  <tr key={t.id}>
-                    <td style={td}>{t.id}</td>
-                    <td style={td}>
-                      <input
-                        name="task_name"
-                        value={ef.task_name}
-                        onChange={onEditChange}
-                        style={{ ...input, width: "100%" }}
-                      />
-                    </td>
-                    <td style={td}>
-                      <select
-                        name="status"
-                        value={ef.status}
-                        onChange={onEditChange}
-                        style={input}
-                      >
-                        <option>Considered</option>
-                        <option>Investigation</option>
-                        <option>Ready To Development</option>
-                        <option>Under Development</option>
-                        <option>Code Review</option>
-                        <option>Development Completed</option>
-                      </select>
-                    </td>
-                    <td style={td}>
-                      <input
-                        name="assigned_to"
-                        value={ef.assigned_to}
-                        onChange={onEditChange}
-                        style={input}
-                      />
-                    </td>
-                    <td style={td}>
-                      <input
-                        type="date"
-                        name="start_date"
-                        value={ef.start_date || ""}
-                        onChange={onEditChange}
-                        style={input}
-                      />
-                    </td>
-                    <td style={td}>
-                      <input
-                        type="date"
-                        name="end_date"
-                        value={ef.end_date || ""}
-                        onChange={onEditChange}
-                        style={input}
-                      />
-                    </td>
-                    <td style={td}>
-                      <button
-                        onClick={saveEdit}
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #2563eb",
-                          borderRadius: 6,
-                          background: "#2563eb",
-                          color: "#fff",
-                          marginRight: 8,
-                        }}
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditId(null)}
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #ddd",
-                          borderRadius: 6,
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={t.id}>
-                    <td style={td}>{t.id}</td>
-                    <td style={td}>{t.task_name}</td>
-                    <td style={td}>{t.status}</td>
-                    <td style={td}>{t.assigned_to ?? "—"}</td>
-                    <td style={td}>{fmt(t.start_date)}</td>
-                    <td style={td}>{fmt(t.end_date)}</td>
-                    <td style={td}>
-                      <button
-                        onClick={() => viewTask(t.id)}
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #ddd",
-                          borderRadius: 6,
-                          marginRight: 6,
-                        }}
-                      >
-                        View
-                      </button>
-                      <button
-                        onClick={() => startEdit(t)}
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #ddd",
-                          borderRadius: 6,
-                          marginRight: 6,
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteTask(t.id)}
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #ddd",
-                          borderRadius: 6,
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+            </thead>
+            <tbody>
+              {visibleTasks.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="empty-state">
+                    {tasks.length === 0
+                      ? "Start by creating your first task."
+                      : "No tasks match this priority yet."}
+                  </td>
+                </tr>
+              ) : (
+                visibleTasks.map((t) =>
+                  editId === t.id ? (
+                    <tr key={t.id}>
+                      <td>{t.id}</td>
+                      <td>
+                        <input name="task_name" value={ef.task_name} onChange={onEditChange} className="field" />
+                      </td>
+                      <td>
+                        <select name="status" value={ef.status} onChange={onEditChange} className="field">
+                          {statusOptions.map((s) => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <select name="priority" value={ef.priority} onChange={onEditChange} className="field">
+                          {priorityOptions.map((p) => (
+                            <option key={p}>{p}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input name="assigned_to" value={ef.assigned_to} onChange={onEditChange} className="field" />
+                      </td>
+                      <td>
+                        <input type="date" name="start_date" value={ef.start_date || ""} onChange={onEditChange} className="field" />
+                      </td>
+                      <td>
+                        <input type="date" name="end_date" value={ef.end_date || ""} onChange={onEditChange} className="field" />
+                      </td>
+                      <td className="actions">
+                        <button onClick={saveEdit} className="btn btn-primary">
+                          Save
+                        </button>
+                        <button onClick={() => setEditId(null)} className="btn btn-ghost">
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={t.id}>
+                      <td>{t.id}</td>
+                      <td>{t.task_name}</td>
+                      <td>
+                        <span className={statusTone[t.status] ?? "badge"}>{t.status}</span>
+                      </td>
+                      <td>
+                        <span className={priorityTone[t.priority ?? "Medium"] ?? "badge"}>{t.priority ?? "Medium"}</span>
+                      </td>
+                      <td>{t.assigned_to ?? "--"}</td>
+                      <td>{fmt(t.start_date)}</td>
+                      <td>{fmt(t.end_date)}</td>
+                      <td className="actions">
+                        <button onClick={() => viewTask(t.id)} className="btn btn-ghost">
+                          View
+                        </button>
+                        <button onClick={() => startEdit(t)} className="btn btn-secondary">
+                          Edit
+                        </button>
+                        <button onClick={() => deleteTask(t.id)} className="btn btn-danger">
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
                 )
-              )
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

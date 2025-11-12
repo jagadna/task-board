@@ -1,8 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import date
 from enum import Enum
 
-#allowed statuses
 class StatusEnum(str, Enum):
     considered = "Considered"
     investigation = "Investigation"
@@ -11,27 +10,29 @@ class StatusEnum(str, Enum):
     code_review = "Code Review"
     development_completed = "Development Completed"
 
-#Request Schemas
-class TaskCreate(BaseModel):
-	task_name : str 
-	status:StatusEnum = StatusEnum.considered  #default
-	assigned_to: str | None = None
-	start_date : date|None = None
-	end_date : date | None = None
-      
-#Response Schema
-class TaskOut(TaskCreate):
-    id: int
+class PriorityEnum(str, Enum):
+    low = "Low"
+    medium = "Medium"
+    high = "High"
+    urgent = "Urgent"
 
-    class Config:
-        orm_mode = True
-        
-#Update
+class TaskCreate(BaseModel):
+    task_name: str
+    status: StatusEnum = StatusEnum.considered
+    assigned_to: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    priority: PriorityEnum = PriorityEnum.medium
 
 class TaskUpdate(BaseModel):
-     task_name :str|None = None
-     status :str|None = None
-     assigned_to :str | None = None
-     start_date: date | None = None
-     end_date: date | None = None
-		
+    task_name: str | None = None
+    status: StatusEnum | None = None
+    assigned_to: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    priority: PriorityEnum | None = None
+
+class TaskOut(TaskCreate):
+    id: int
+    class Config:
+        orm_mode = True
