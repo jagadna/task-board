@@ -48,10 +48,17 @@ function App() {
     priority: "Medium",
   });
 
-  // login form
+  // auth forms
+  const [authMode, setAuthMode] = useState("login");
   const [loginForm, setLoginForm] = useState({
     username: "",
     password: "",
+  });
+  const [signupForm, setSignupForm] = useState({
+    username: "",
+    password: "",
+    confirm: "",
+    role: "user",
   });
 
   const [priorityFilter, setPriorityFilter] = useState("All");
@@ -83,52 +90,126 @@ function App() {
     }
   }
 
+  const switchAuthMode = (mode) => {
+    setAuthMode(mode);
+    setErr("");
+  };
+
+  function persistSession(accessToken, me) {
+    setToken(accessToken);
+    setUser(me);
+    localStorage.setItem("taskboard_token", accessToken);
+    localStorage.setItem("taskboard_user", JSON.stringify(me));
+  }
+
+  async function loginWithCredentials(username, password) {
+    const trimmed = username.trim();
+    if (!trimmed) {
+      throw new Error("Username is required");
+    }
+    if (!password) {
+      throw new Error("Password is required");
+    }
+
+    const body = new URLSearchParams();
+    body.append("username", trimmed);
+    body.append("password", password);
+    body.append("grant_type", "password");
+
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+
+    if (!res.ok) {
+      let detail = "Login failed";
+      try {
+        const data = await res.json();
+        detail = data.detail || detail;
+      } catch (err) {
+        console.warn("Unable to parse login error", err);
+      }
+      throw new Error(detail);
+    }
+
+    const data = await res.json();
+    const accessToken = data.access_token;
+    if (!accessToken) throw new Error("No access token received");
+
+    const meRes = await fetch(`${API}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!meRes.ok) throw new Error("Failed to load user info");
+    const me = await meRes.json();
+    return { accessToken, me };
+  }
+
   async function login(e) {
     e.preventDefault();
     setErr("");
 
     try {
-      if (!loginForm.username.trim()) {
-        alert("Enter a username");
-        return;
-      }
-
-      const body = new URLSearchParams();
-      body.append("username", loginForm.username);
-      body.append("password", loginForm.password);
-      body.append("grant_type", "password");
-
-      const res = await fetch(`${API}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-      });
-
-      if (!res.ok) {
-        throw new Error("Login failed");
-      }
-
-      const data = await res.json();
-      const accessToken = data.access_token;
-      if (!accessToken) throw new Error("No access token received");
-
-      const meRes = await fetch(`${API}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!meRes.ok) throw new Error("Failed to load user info");
-      const me = await meRes.json();
-
-      setToken(accessToken);
-      setUser(me);
-      localStorage.setItem("taskboard_token", accessToken);
-      localStorage.setItem("taskboard_user", JSON.stringify(me));
-
+      const { accessToken, me } = await loginWithCredentials(
+        loginForm.username,
+        loginForm.password
+      );
+      persistSession(accessToken, me);
       setLoginForm({ username: "", password: "" });
     } catch (e) {
       setErr(e.message || "Login failed");
+    }
+  }
+
+  async function signup(e) {
+    e.preventDefault();
+    setErr("");
+
+    try {
+      const username = signupForm.username.trim();
+      if (!username) {
+        throw new Error("Choose a username");
+      }
+      if (!signupForm.password || signupForm.password.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+      if (signupForm.password !== signupForm.confirm) {
+        throw new Error("Passwords do not match");
+      }
+
+      const res = await fetch(`${API}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          password: signupForm.password,
+          role: signupForm.role || "user",
+        }),
+      });
+
+      if (!res.ok) {
+        let detail = "Signup failed";
+        try {
+          const data = await res.json();
+          detail = data.detail || detail;
+        } catch (err) {
+          console.warn("Unable to parse signup error", err);
+        }
+        throw new Error(detail);
+      }
+
+      await res.json().catch(() => null);
+      const { accessToken, me } = await loginWithCredentials(
+        username,
+        signupForm.password
+      );
+      persistSession(accessToken, me);
+      setSignupForm({ username: "", password: "", confirm: "", role: "user" });
+    } catch (e) {
+      setErr(e.message || "Signup failed");
     }
   }
 
@@ -329,20 +410,41 @@ function App() {
 
   // ---------- LOGIN SCREEN ----------
   if (!user) {
+    const copy =
+      authMode === "login"
+        ? "Sign in to review tasks, assign work, and keep delivery moving."
+        : "Spin up a fresh workspace login so you can start managing tasks.";
     return (
       <div className="page login-screen">
         <div className="login-card">
-          <h2 style={{ marginTop: 0, marginBottom: 4 }}>TaskBoard Login</h2>
-          <p
-            style={{
-              marginTop: 0,
-              marginBottom: 16,
-              fontSize: 13,
-              color: "#6b7280",
-            }}
-          >
-            Sign in to manage your project tasks.
-          </p>
+          <div className="auth-toggle" role="tablist" aria-label="Auth mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMode === "login"}
+              className={`auth-toggle-btn ${
+                authMode === "login" ? "active" : ""
+              }`}
+              onClick={() => switchAuthMode("login")}
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={authMode === "signup"}
+              className={`auth-toggle-btn ${
+                authMode === "signup" ? "active" : ""
+              }`}
+              onClick={() => switchAuthMode("signup")}
+            >
+              Sign up
+            </button>
+          </div>
+          <h2 style={{ marginTop: 4, marginBottom: 4 }}>
+            {authMode === "login" ? "Welcome back" : "Create your account"}
+          </h2>
+          <p className="auth-subtext">{copy}</p>
           {err && (
             <p
               style={{
@@ -354,31 +456,71 @@ function App() {
               {err}
             </p>
           )}
-          <form
-            onSubmit={login}
-            style={{ display: "flex", flexDirection: "column", gap: 10 }}
-          >
-            <input
-              placeholder="Username"
-              value={loginForm.username}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, username: e.target.value })
-              }
-              className="field"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={loginForm.password}
-              onChange={(e) =>
-                setLoginForm({ ...loginForm, password: e.target.value })
-              }
-              className="field"
-            />
-            <button type="submit" className="btn btn-primary">
-              Login
-            </button>
-          </form>
+          {authMode === "login" ? (
+            <form
+              onSubmit={login}
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}
+            >
+              <input
+                placeholder="Username"
+                value={loginForm.username}
+                onChange={(e) =>
+                  setLoginForm({ ...loginForm, username: e.target.value })
+                }
+                className="field"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={loginForm.password}
+                onChange={(e) =>
+                  setLoginForm({ ...loginForm, password: e.target.value })
+                }
+                className="field"
+              />
+              <button type="submit" className="btn btn-primary">
+                Login
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={signup}
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}
+            >
+              <input
+                placeholder="Choose a username"
+                value={signupForm.username}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, username: e.target.value })
+                }
+                className="field"
+              />
+              <input
+                type="password"
+                placeholder="Create a password"
+                value={signupForm.password}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, password: e.target.value })
+                }
+                className="field"
+              />
+              <input
+                type="password"
+                placeholder="Confirm password"
+                value={signupForm.confirm}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, confirm: e.target.value })
+                }
+                className="field"
+              />
+              <small className="auth-hint">
+                Password must be at least 6 characters.
+              </small>
+              <button type="submit" className="btn btn-primary">
+                Create account &amp; sign in
+              </button>
+            </form>
+          )}
         </div>
       </div>
     );

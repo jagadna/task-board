@@ -21,7 +21,12 @@
 body {
   margin: 0;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f7f8fc;
+  background-image:
+    linear-gradient(120deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.35)),
+    url("/Bgi.png");
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
   color: #0f172a;
   min-height: 100vh;
 }
@@ -30,9 +35,10 @@ body {
   width: 100%;
   min-height: 100vh;
   padding: var(--page-padding);
-  background: radial-gradient(120% 200% at 10% 10%, rgba(79, 70, 229, 0.18), transparent 60%),
-    radial-gradient(90% 180% at 90% 20%, rgba(236, 72, 153, 0.16), transparent 55%),
-    linear-gradient(180deg, #f7f8fc 0%, #ffffff 45%, #f1f5f9 100%);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35);
+  border-radius: 28px;
+  backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -612,17 +618,45 @@ body {
 }
 
 .badge-solid-rose {
-  background: linear-gradient(135deg, #ef4444, #f97316);
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.85), rgba(225, 29, 72, 0.95));
   color: #fff;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 48px 20px;
-  color: #64748b;
-  font-weight: 500;
+
+.page.login-screen {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 100vh;
+  padding: clamp(40px, 6vw, 72px);
+  background-color: #020617;
+  background-image:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.92), rgba(2, 6, 23, 0.45)),
+    url("/Bgi.png");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
+.page.login-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(60% 80% at 20% 20%, rgba(79, 70, 229, 0.45), transparent 60%),
+    radial-gradient(50% 70% at 80% 10%, rgba(14, 165, 233, 0.35), transparent 55%),
+    linear-gradient(120deg, rgba(2, 6, 23, 0.55), rgba(15, 23, 42, 0.25));
+  backdrop-filter: blur(3px);
+  opacity: 0.65;
+}
+
+.page.login-screen > * {
+  position: relative;
+  z-index: 1;
+}
 @media (max-width: 768px) {
   .hero {
     flex-direction: column;
@@ -630,17 +664,7 @@ body {
 
   .actions {
     flex-direction: column;
-    align-items: stretch;
   }
-}
-
-.filter-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin: 0 0 20px;
-  flex-wrap: wrap;
 }
 
 .filter-label {
@@ -887,8 +911,11 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .login-card {
@@ -897,6 +924,48 @@ body {
   padding: 28px;
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(2,6,23,0.08);
+}
+
+.auth-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  background: #eef2ff;
+  padding: 4px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+}
+
+.auth-toggle-btn {
+  border: none;
+  background: transparent;
+  color: #4c1d95;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-toggle-btn.active {
+  background: #4f46e5;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+}
+
+.auth-subtext {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.auth-hint {
+  display: block;
+  margin-top: -4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .main-content {
